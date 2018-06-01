@@ -3,6 +3,7 @@ package sandbox.felix;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.felix.resolver.Logger;
 import org.apache.felix.resolver.ResolverImpl;
 import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.impl.util.CollectionUtil;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.osgi.resource.Capability;
 import org.osgi.resource.Requirement;
@@ -33,31 +35,33 @@ public class ProcessDefinitionResolver {
 	/**
 	 * @return unresolved process definitions
 	 */
-	public Collection<ProcessDefinition> resolveInCurrentState()
+	public List<UnresolvedProcessDefinition> resolveInCurrentState()
 	{
 		ResolverImpl resolver = new ResolverImpl(new Logger(0), 1);
 
         Collection<Resource> resources = new ArrayList<>();
         resources.add(ResourceFactory.forEngine(engine));
         resources.addAll(ResourceFactory.listDefinitions(engine));
+        resources.addAll(ResourceFactory.listProcessApplications(engine));
 
-        Set<ProcessDefinition> unresolvedProcessDefinitions = new HashSet<>();
+        List<UnresolvedProcessDefinition> unresolvedProcessDefinitions = new ArrayList<>();
         
         ResolveContextImpl context = new ResolveContextImpl(resources);
         try {
 			resolver.resolve(context);
 		} catch (ResolutionException e) {
-			// TODO: would be nice to return the reason as well
 			Collection<Requirement> requirements = e.getUnresolvedRequirements();
 			
-			for (Requirement requirement : requirements)
-			{
-				Resource resource = requirement.getResource();
-				if (resource instanceof ProcessDefinitionResource)
-				{
-					unresolvedProcessDefinitions.add(((ProcessDefinitionResource) resource).getDefinition());
-				}
-			}
+			Map<ProcessDefinition, List<Requirement>> requirementsByProcdef = new HashMap<>();
+			
+			requirements.stream()
+			.filter(r -> r.getResource() instanceof ProcessDefinitionResource)
+			.forEach(r -> {
+				ProcessDefinition definition = ((ProcessDefinitionResource) r.getResource()).getDefinition();
+				CollectionUtil.addToMapOfLists(requirementsByProcdef, definition, r);
+			});
+
+			requirementsByProcdef.forEach((p, r) -> unresolvedProcessDefinitions.add(new UnresolvedProcessDefinition(p, r)));
 		}
         
         return unresolvedProcessDefinitions;

@@ -1,4 +1,4 @@
-package sandbox.felix.engine;
+package sandbox.felix.pa;
 
 import java.util.Collections;
 import java.util.Map;
@@ -9,15 +9,18 @@ import org.osgi.resource.Resource;
 import sandbox.felix.MatchingRequirement;
 import sandbox.felix.Namespaces;
 
-public class DeploymentRegistration implements MatchingRequirement<DeploymentRegistration>, Capability {
+public class PaDeploymentRegistration implements MatchingRequirement<PaDeploymentRegistration>, Capability {
 
 	private final Resource resource;
-	private final String deploymentId;
 	
-	public DeploymentRegistration(Resource resource, String deploymentId)
+	private final String deploymentId;
+	private final String paName;
+	
+	public PaDeploymentRegistration(Resource resource, String deploymentId, String paName)
 	{
 		this.resource = resource;
 		this.deploymentId = deploymentId;
+		this.paName = paName;
 	}
 	
 	@Override
@@ -41,18 +44,19 @@ public class DeploymentRegistration implements MatchingRequirement<DeploymentReg
 	}
 
 	@Override
-	public boolean isSatisfiedBy(DeploymentRegistration requirement) {
-		return deploymentId.equals(requirement.deploymentId);
+	public boolean isSatisfiedBy(PaDeploymentRegistration requirement) {
+		return deploymentId.equals(requirement.deploymentId)
+				&& paName.equals(requirement.paName);
 	}
 
 	@Override
-	public Class<DeploymentRegistration> getCapabilityType() {
-		return DeploymentRegistration.class;
+	public Class<PaDeploymentRegistration> getCapabilityType() {
+		return PaDeploymentRegistration.class;
 	}
 	
 	@Override
 	public String toString() {
-		return "Deployment registration for " + deploymentId;
+		return "Registration of process application " + paName + " for deployment " + deploymentId;
 	}
 
 }

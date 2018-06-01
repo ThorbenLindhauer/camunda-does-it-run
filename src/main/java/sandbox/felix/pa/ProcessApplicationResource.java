@@ -1,4 +1,4 @@
-package sandbox.felix.engine;
+package sandbox.felix.pa;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,16 +9,18 @@ import org.osgi.resource.Capability;
 import org.osgi.resource.Requirement;
 import org.osgi.resource.Resource;
 
-public class ProcessEngineResource implements Resource {
+import sandbox.felix.engine.JobExecutorRegistration;
+
+public class ProcessApplicationResource implements Resource {
 
 	private final List<Capability> capabilities;
 	
-	public ProcessEngineResource(Collection<String> registeredDeployments)
+	public ProcessApplicationResource(String name, Collection<String> registeredDeployments)
 	{
 		this.capabilities = new ArrayList<>();
 		for (String deployment : registeredDeployments)
 		{
-			this.capabilities.add(new JobExecutorRegistration(this, deployment));
+			this.capabilities.add(new PaDeploymentRegistration(this, deployment, name));
 		}
 	}
 	

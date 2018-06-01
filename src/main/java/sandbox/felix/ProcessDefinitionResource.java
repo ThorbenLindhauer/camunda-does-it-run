@@ -7,14 +7,21 @@ import java.util.List;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.CallActivity;
+import org.camunda.bpm.model.bpmn.instance.ExtensionElements;
+import org.camunda.bpm.model.bpmn.instance.Process;
+import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperties;
+import org.camunda.bpm.model.bpmn.instance.camunda.CamundaProperty;
 import org.osgi.resource.Capability;
 import org.osgi.resource.Requirement;
 import org.osgi.resource.Resource;
 
-import sandbox.felix.engine.DeploymentRegistration;
+import sandbox.felix.engine.JobExecutorRegistration;
+import sandbox.felix.pa.PaDeploymentRegistration;
 
 public class ProcessDefinitionResource implements Resource
 {
+	private static final String PA_PROPERTY = "process-application";
+	
 	private final ProcessDefinition definition;
 
     private final List<Capability> capabilities = new ArrayList<>();
@@ -37,8 +44,31 @@ public class ProcessDefinitionResource implements Resource
     	
         if (deploymentAwareJobExecutor)
         {
-        	requirements.add(new DeploymentRegistration(this, definition.getDeploymentId()));
+        	requirements.add(new JobExecutorRegistration(this, definition.getDeploymentId()));
         }
+        
+        // TODO: support multiple processes
+        Process process = modelInstance.getModelElementsByType(Process.class).iterator().next();
+        
+        ExtensionElements extensionElements = process.getExtensionElements();
+        if (extensionElements != null)
+        {
+        	CamundaProperties props = (CamundaProperties) extensionElements.getUniqueChildElementByType(CamundaProperties.class);
+        	if (props != null)
+        	{
+        		Collection<CamundaProperty> properties = props.getChildElementsByType(CamundaProperty.class);
+        		
+        		for (CamundaProperty property : properties)
+        		{
+        			if (PA_PROPERTY.equals(property.getCamundaName()))
+        			{
+        				String value = property.getCamundaValue();
+        				requirements.add(new PaDeploymentRegistration(this, definition.getDeploymentId(), value));
+        			}
+        		}
+        	}
+        }
+        
     }
 
 	private Requirement createCallActivityRequirement(CallActivity callActivity) {
